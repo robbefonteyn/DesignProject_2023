@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+#PBS -l nodes=1:ppn=8
+#PBS -l walltime=24:00:00
+#PBS -l mem=27gb
+
+# Change to the directory you are working in 
+cd /kyukon/data/gent/courses/2023/ahta_C003695/members/vsc45888/Design_Project/PreProcessingATACseq/Fastqfiles
+
+
+### Trimming, Alignment, QC
+
+# Load the necessary modules
+module load Trimmomatic/0.39-Java-11
+
+# Make directory for to store fastqc output, bowtie2 logs and sam files
+# mkdir fastqc
+
+
+# 
+# Make an array of the IDs
+IDs=(SRR17693254 SRR17693255 SRR17693256 SRR17693257 SRR17693258 SRR17693259 SRR17693260 SRR17693261 SRR17693262 SRR17693265 SRR17693264 SRR17693263)
+
+# Trimming, alignment and QC on samples
+for ID in ${IDs[@]}
+do 
+    #gzip -d $ID\_1.fastq.gz
+    #gzip -d $ID\_2.fastq.gz
+    # Perform trimming based on adapters (ILLUMINACLIP:Adapters.fa:2:30:10) and on the quality score with a sliding window (SLIDINGWINDOW:4:15) using 8 cores
+    # Edit the command to be able to use paired end data
+    java -jar $EBROOTTRIMMOMATIC/trimmomatic-0.39.jar PE -threads 8 -phred33 $ID\_1.fastq.gz $ID\_2.fastq.gz $ID\_trim\_forward\_paired.fastq.gz $ID\_trim\_forward\_unpaired.fastq.gz $ID\_trim\_reverse\_paired.fastq.gz $ID\_trim\_reverse\_unpaired.fastq.gz ILLUMINACLIP:Adapters.fa:2:30:10 SLIDINGWINDOW:4:15 
+done 
+
+echo Finished!

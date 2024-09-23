@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+#PBS -l nodes=1:ppn=8
+#PBS -l walltime=24:00:00
+#PBS -l mem=27gb
+
+# Change to the directory you are working in 
+cd /kyukon/data/gent/courses/2023/ahta_C003695/members/vsc45888/Design_Project/PreProcessingATACseq/Fastqfiles
+
+
+### Trimming, Alignment, QC
+
+# Load the necessary modules
+module load parallel-fastq-dump/0.6.6-GCCcore-9.3.0-SRA-Toolkit-3.0.0-Python-3.8.2
+
+# Make an array of the IDs
+IDs=(SRR17693263)
+
+for ID in ${IDs[@]}
+do 
+    # Echo the ID you are processing
+    echo $ID
+    	
+    # Load the sequencing data for the ID you are processing using 8 cores
+    parallel-fastq-dump --sra-id $ID --threads 8 --split-files --gzip
+
+done

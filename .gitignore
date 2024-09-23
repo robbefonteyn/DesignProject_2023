@@ -1,0 +1,5 @@
+.DS_Store
+*.pkl
+*.h5ad
+
+.ipynb_checkpoints

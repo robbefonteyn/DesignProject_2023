@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+
+#PBS -l nodes=1:ppn=8
+#PBS -l walltime=24:00:00
+#PBS -l mem=27gb
+
+# Change to the directory you are working in 
+cd /kyukon/data/gent/courses/2023/ahta_C003695/members/vsc45888/Design_Project/PreProcessingATACseq_Test
+
+
+### Trimming, Alignment, QC
+
+# Load the necessary modules
+module load Bowtie2/2.4.1-GCC-9.3.0
+module load Trimmomatic/0.39-Java-11
+module load FastQC/0.11.9-Java-11
+module load parallel-fastq-dump/0.6.6-GCCcore-9.3.0-SRA-Toolkit-3.0.0-Python-3.8.2
+
+# Download & unzip reference genome
+# wget http://ftp.ensembl.org/pub/release-104/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.toplevel.fa.gz
+# pigz -d *.gz
+
+# Index the reference genome
+# bowtie2-build --threads 8 Homo_sapiens.GRCh38.dna.toplevel.fa Homo_sapiens
+
+# Make directory for to store fastqc output, bowtie2 logs and sam files
+mkdir fastqc
+mkdir bowtie2_logs
+mkdir sam_files
+
+# Make an array of the IDs
+IDs=(SRR17693253 SRR17693254 SRR17693255 SRR17693256 SRR17693257 SRR17693258 SRR17693259 SRR17693260 SRR17693261 SRR17693262 SRR17693265 SRR17693264 SRR17693263)SRR17693253 SRR17693254 SRR17693255 SRR17693256 SRR17693257 SRR17693258 SRR17693259 SRR17693260 SRR17693261 SRR17693262 SRR17693265 SRR17693264 SRR17693263
+
+# Trimming, alignment and QC on samples
+for ID in ${IDs[@]}
+do 
+    # Echo the ID you are processing
+    echo $ID
+    	
+    # Load the sequencing data for the ID you are processing using 8 cores
+    parallel-fastq-dump --sra-id $ID --threads 8 --split-files
+    	
+    # Perform trimming based on adapters (ILLUMINACLIP:Adapters.fa:2:30:10) and on the quality score with a sliding window (SLIDINGWINDOW:4:15) using 8 cores
+    # Edit the command to be able to use paired end data
+    java -jar $EBROOTTRIMMOMATIC/trimmomatic-0.39.jar PE -threads 8 -phred33 -trimlog $ID\_trim.log $ID\_1.fastq $ID\_2.fastq $ID\_trim\_forward\_paired.fastq $ID\_trim\_forward\_unpaired.fastq $ID\_trim\_reverse\_paired.fastq $ID\_trim\_reverse\_unpaired.fastq ILLUMINACLIP:Adapters.fa:2:30:10 SLIDINGWINDOW:4:15 
+    	
+    # Align using bowtie2, 
+    # look for optimisation with ATAC-seq data
+    bowtie2 -p 8 -x Homo_sapiens -1 $ID\_trim\_forward\_paired.fastq -2 $ID\_trim\_reverse\_paired.fastq -S sam_files/$ID.sam 2> bowtie2_logs/$ID\_bowtie.log
+    
+    # Remove fastq files
+	rm $ID\_1.fastq
+	rm $ID\_2.fastq
+	rm $ID\_trim\_forward\_paired.fastq
+	rm $ID\_trim\_reverse\_paired.fastq
+	rm $ID\_trim\_forward\_unpaired.fastq
+	rm $ID\_trim\_reverse\_unpaired.fastq
+	
+done 
+
+
+### Making BigWig files for visualization
+
+# Unload incompatible modules
+module purge
+# Load the necessary modules
+module load SAMtools/1.15-GCC-11.2.0
+module load deepTools/3.5.1-foss-2021b
+
+# Make a directory to store bam and bigwig files
+mkdir bam_files
+mkdir bw_files
+
+# loop over IDs
+for ID in ${IDs[@]}
+do 
+    # convert sam files to bam files
+    samtools view -S -b sam\_files/$ID.sam > bam\_files/$ID.bam
+    
+    # sort the bam files
+    samtools sort bam\_files/$ID.bam -o bam\_files/$ID.bam
+    
+    # index the bam files
+    samtools index bam\_files/$ID.bam bam\_files/$ID.bam.bai
+    
+    # create bigwig files with binsize of 25bp and using CPM normalization and 8 cores
+    bamCoverage -b bam\_files/$ID.bam -o bw\_files/$ID.bw -p 8 --binSize 25 --normalizeUsing CPM
+done
+
+
+### Peakcalling with MACS2
+
+# Load the necessary modules
+module load MACS2/2.2.7.1-foss-2021b
+
+# Make a directory to store macs2 output files & logs 
+mkdir macs2_logs
+mkdir macs2_files
+
+
+# Define paths to bam files
+i_bam=$(for i in ${ID[@]}; do echo bam_files/$i.bam; done) # append "bam_files/" and ".bam" to the IDs
+
+# Peakcalling with MACS2 (all samples combined) --nomodel? -format BAMPE?
+macs2 callpeak -t ${i_bam[@]} -n PBMC\_ATAC-seq --nomodel -f BAMPE --outdir macs2\_files -g hs 2> macs2\_logs/PBMC\_ATAC-seq.log
+
+
+### QC with multiQC
+
+# Unload incompatible modules
+module purge
+# Load the necessary modules
+module load MultiQC/1.9-intel-2020a-Python-3.8.2
+
+# Use multiqc to make an overview of all quality control and log files performed 
+# ("." option searches all files and subdirectories of the current working directory)
+multiqc .

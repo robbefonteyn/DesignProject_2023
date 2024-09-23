@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+#PBS -l nodes=1:ppn=8
+#PBS -l walltime=24:00:00
+#PBS -l mem=20gb
+
+# Change to the directory you are working in 
+cd /kyukon/data/gent/courses/2023/ahta_C003695/members/vsc46720/cellranger
+
+# download fastqs, reference genome and cellranger software
+wget -O cellranger-arc-2.0.2.tar.gz "https://cf.10xgenomics.com/releases/cell-arc/cellranger-arc-2.0.2.tar.gz?Expires=1716252080&Key-Pair-Id=APKAI7S6A5RYOXBWRPDA&Signature=B-DCvUiOjLFU8x24-GewygQErU3kTAIIW04eDQr5uNhuPxdVH2JEt8qnrWyLIBJNqm~UXaUFtquL8yHAgsRXgEvgYgB5XHR0w15KcJRG8XC3DZ209-NmThzIFDfjOSyqQHasDijubUaurdhVt9KaD2MC8QUcKiFi9FykXhtwImXYfinymvSmoRvE6dfDCTti0gKL~UtPMZsqRQYSRaygfQreZ58kTCctVW-tZLOKBCr-xlvA3QGR6IVuoZTz5NgmA4ehQiFEZOhTuxOYUh8i9wekBYkbZpviSgmU5kUtVKou0OzBpjL-VJvxoic9uN-6pfOX0SZJCKIMqZN2tprzeA__"
+wget "https://cf.10xgenomics.com/supp/cell-arc/refdata-cellranger-arc-GRCh38-2020-A-2.0.0.tar.gz"
+wget https://s3-us-west-2.amazonaws.com/10x.files/samples/cell-arc/2.0.0/10k_PBMC_Multiome_nextgem_Chromium_Controller/10k_PBMC_Multiome_nextgem_Chromium_Controller_fastqs.tar
+
+# unpack
+tar -xzvf refdata-cellranger-arc-GRCh38-2020-A-2.0.0.tar.gz
+tar -xzvf refdata-cellranger-arc-GRCh38-2020-A-2.0.0.tar.gz
+tar -xf 10k_PBMC_Multiome_nextgem_Chromium_Controller_fastqs.tar
+
+# add cellranger to PATH variable
+export PATH=/kyukon/data/gent/courses/2023/ahta_C003695/members/vsc46720/cellranger/cellranger-arc-2.0.2:$PATH
+
+# run cellranger
+cellranger-arc count --id PBMC --reference refdata-cellranger-arc-GRCh38-2020-A-2.0.0 --libraries pbmc_library.csv --localcores=8 --localmem=20
+
+# remove downloaded files and unpacked folders
+rm cellranger-arc-2.0.2.tar.gz
+rm refdata-cellranger-arc-GRCh38-2020-A-2.0.0.tar.gz
+rm 10k_PBMC_Multiome_nextgem_Chromium_Controller_fastqs.tar
+rm -rf cellranger-arc-2.0.2
+rm -rf refdata-cellranger-arc-GRCh38-2020-A-2.0.0
+rm -rf 10k_PBMC_Multiome_nextgem_Chromium_Controller_fastqs

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+#PBS -l nodes=1:ppn=10
+#PBS -l walltime=04:00:00
+#PBS -l mem=100gb
+
+module load CellRanger-ATAC/2.1.0
+
+# Change to the directory you are working in 
+cd /kyukon/data/gent/courses/2023/ahta_C003695/members/vsc45888/Design_Project
+
+cellranger-atac count --id CR_PBMC --reference ./GRCh38 --fastqs ./Fastq_PBMC/atac

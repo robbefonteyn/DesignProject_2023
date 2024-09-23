@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+#PBS -l nodes=1:ppn=8
+#PBS -l walltime=24:00:00
+#PBS -l mem=27gb
+
+# Change to the directory you are working in 
+cd /kyukon/data/gent/courses/2023/ahta_C003695/members/vsc45888/Design_Project/PreProcessingATACseq_Test
+
+
+### Trimming, Alignment, QC
+
+# Load the necessary modules
+module load Bowtie2/2.4.1-GCC-9.3.0
+
+# Download & unzip reference genome
+# wget http://ftp.ensembl.org/pub/release-104/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.toplevel.fa.gz
+# pigz -d *.gz
+
+# Index the reference genome
+# bowtie2-build --threads 8 Homo_sapiens.GRCh38.dna.toplevel.fa Homo_sapiens
+
+# Make directory for to store fastqc output, bowtie2 logs and sam files
+mkdir bowtie2_logs
+mkdir sam_files
+
+# Make an array of the IDs
+IDs=(SRR17693253 SRR17693254 SRR17693255 SRR17693256 SRR17693257 SRR17693258 SRR17693259 SRR17693260 SRR17693261 SRR17693262 SRR17693265 SRR17693264 SRR17693263)
+# Trimming, alignment and QC on samples
+for ID in ${IDs[@]}
+do 
+    # Echo the ID you are processing
+    echo $ID
+    
+    # Align using bowtie2, 
+    # look for optimisation with ATAC-seq data
+    bowtie2 -p 8 -x Homo_sapiens -1 $ID\_trim\_forward\_paired.fastq.gz -2 $ID\_trim\_reverse\_paired.fastq.gz -S sam_files/$ID.sam 2> bowtie2_logs/$ID\_bowtie.log
+    
+    # Remove fastq files
+	rm $ID\_trim\_forward\_paired.fastq.gz
+	rm $ID\_trim\_reverse\_paired.fastq.gz
+	rm $ID\_trim\_forward\_unpaired.fastq.gz
+	rm $ID\_trim\_reverse\_unpaired.fastq.gz
+	
+done 
